@@ -10,3 +10,8 @@ num 	::= 	0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9
 --------------
 ambiguity in incrop positioning..?
 
+preincr   ::= incrop expr
+postincr  ::= expr incrop
+tail_expr ::= num | lvalue | preincr | (expr)
+head_expr ::= postincr | expr binop expr
+expr      ::= tail_expr head_expr | head_expr
