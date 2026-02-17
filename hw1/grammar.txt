@@ -8,10 +8,12 @@ num 	::= 	0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9
 
 -- Problems --
 --------------
-ambiguity in incrop positioning..?
+expr is left side recursive - expr := expr incrop cannot be made LL(1)
 
 preincr   ::= incrop expr
 postincr  ::= expr incrop
 tail_expr ::= num | lvalue | preincr | (expr)
 head_expr ::= postincr | expr binop expr
-expr      ::= tail_expr head_expr | head_expr
+expr      ::= tail_expr head_expr | tail_expr
+
+painful list concatenation (binop is nullable, making expr expr valid)
