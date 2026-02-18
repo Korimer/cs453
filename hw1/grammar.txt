@@ -9,6 +9,9 @@ num 	::= 	0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9
 -- Problems --
 --------------
 recursion 
+
+- Can be fixed by splitting expr into a recursive and non-recursive half
+
 preincr   ::= incrop expr
 postincr  ::= expr incrop
 tail_expr ::= num | lvalue | preincr | (expr)
@@ -17,3 +20,15 @@ expr      ::= tail_expr head_expr | tail_expr
 
 painful list concatenation (binop is nullable, making expr expr valid)
 
+- can be slightly polished by making list concatenation an explicit case
+  rather than implicit from a binop
+
+binop ::= + | -
+head_expr ::= postincr | expr binop expr | expr expr
+
+-- Predictive Parsing --
+________________________
+
+| token | first | follow |
+|:-:|:-:|:-:|
+|expr|
