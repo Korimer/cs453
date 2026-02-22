@@ -26,6 +26,28 @@ painful list concatenation (binop is nullable, making expr expr valid)
 binop ::= + | -
 head_expr ::= postincr | expr binop expr | expr expr
 
+-- Final Grammar --
+-------------------
+expr         ::= rec_expr
+rec_expr     ::= base_expr rec_expr | 
+
+base_expr    ::= mono_expr rec_base
+rec_base     ::= binop mono_expr rec_base |
+             
+mono_expr    ::= incrop mono_expr | postfix_expr
+
+postfix_expr ::= literal rec_postfix
+rec_postfix  ::= incrop rec_postfix |
+
+literal      ::= num | lvalue | (expr)
+
+lvalue       ::= $ expr
+
+num 	     ::= 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 
+incrop       ::= ++ | --
+binop        ::= + | -
+
+
 -- Predictive Parsing --
 ________________________
 
