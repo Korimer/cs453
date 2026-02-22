@@ -5,134 +5,372 @@ import java.util.Scanner;
 public class Parse {
 
   public static void main(String[] args) {
-    Scanner scnr = new Scanner(System.in);
+    //Scanner scnr = new Scanner(System.in);
     ArrayList<String> lines = new ArrayList<>();
-    while (scnr.hasNext()) {
-      lines.add(scnr.nextLine());
+    //while (scnr.hasNext()) {
+    //  lines.add(scnr.nextLine());
+    //}
+    //scnr.close();
+    lines.add("++++(1+++1)#asdgfasf");
+    lines.add("++");
+    try {
+      CharQueue queue = Tokenizer.classifyString(lines);
+      ExprToken e = Tokenizer.tokenize(queue);
+      System.out.println("content: " + e.getContent());
+    } catch (Exception e) {
+      throw new RuntimeException(e);
     }
   }
 }
 
 class Tokenizer {
 
-  public static ExprToken tokenize(ArrayDeque<ClassifiedString> classified) {
-
-    return null;
+  public static ExprToken tokenize(CharQueue classified) throws GrammarException {
+    ExprToken expr = new ExprToken(classified);
+    return expr;
   }
 
-  public static ArrayDeque<ClassifiedString> classifyString(String s) throws SyntaxParsingException {
-    ArrayDeque<ClassifiedString> classified = new ArrayDeque<>();
-    String[] preparsed_lines = preparse(s);
-
-    for (int i=0; i<preparsed_lines.length; i++) {
-      String line = preparsed_lines[i];
+  public static CharQueue classifyString(ArrayList<String> s) throws SyntaxParsingException {
+    CharQueue classified = new CharQueue();
+    ArrayList<String> preparsed_lines = preparse(s);
+    int i=0;
+    for (i=0; i<preparsed_lines.size(); i++) {
+      String line = preparsed_lines.get(i);
       for (int j=0; j<line.length(); j++) {
-        ClassifiedString result = identify(s.substring(j,j+1));
+        ClassifiedString result = identify(line.substring(j,j+1),i+1);
         if (result == null)
           throw new SyntaxParsingException(i+1);
+        if (result.type == StringType.Comment)
+          break;
         classified.add(result);
       }
     }
 
-    classified.add(new ClassifiedString("", StringType.EOF));
+    classified.add(new ClassifiedString("", StringType.EOF,i+1));
 
     return classified;
   }
-  private static String[] preparse(String s) throws SyntaxParsingException {
-    String[] lines = s.split("\\n");
-    for (int i=0; i<lines.length; i++) {
-      String line = lines[i];
+  
+  private static ArrayList<String> preparse(ArrayList<String> lines) throws SyntaxParsingException {
+    for (int i=0; i<lines.size(); i++) {
+      String line = lines.get(i);
       if (line.contains(">") || line.contains("<"))
         throw new SyntaxParsingException(i+1);
-      lines[i] = line
+      lines.set(i,line
         .replace("++",">")
         .replace("--","<")
         .replace(" ","")
-      ;
+      );
     }
     
     return lines;
   }
 
-  private static ClassifiedString identify(String s) {
+  private static ClassifiedString identify(String s, int linenum) {
     for (StringType stype : StringType.values()) {
       if (stype.chars.contains(s))
-        return new ClassifiedString(s, stype);
+        return new ClassifiedString(s, stype,linenum);
     }
     return null;
   }
 }
 
 enum TokenType {
-  Epxr,
-  BaseExpr, RecExpr,
-  MonoExpr,
-  PostfixExpr, RecPostfix,
-  Literal,
-  Lvalue,
+  Expr,
+  RecExpr,
+  BaseExpr,
+  RecBase,
+  SingleExpr,
+  PrefixExpr,
+  PostfixExpr,
+  RecPostfix,
+  Atomic,
+  LValue,
+  ParenValue,
   Num,
   Incrop,
   Binop,
+  _PrintableText;
 }
 
-class ExprToken implements TokenInterface {
-  public Token getNext(ClassifiedString c) {
+class ExprToken extends Token {
+
+  public ExprToken(CharQueue q) throws GrammarException {
+    ClassifiedString c = q.peek();
+    if (c == null) {throw new GrammarException(q.getLineNumber());}
+    switch (c.type) {
+      case Incrop: case Num: case OpnParen: case Ref:
+        innerTokens.add(new BaseExprToken(q));
+        innerTokens.add(new RecExprToken(q));
+        break;
+      default:
+        throw new GrammarException(c.linenum);
+    }
+  }
+  
+  public TokenType getType() {
+    return TokenType.Expr;
+  }
+}
+
+class RecExprToken extends Token {
+  public RecExprToken(CharQueue q) throws GrammarException {
+    ClassifiedString c = q.peek();
+    if (c == null) {throw new GrammarException(q.getLineNumber());}
+    switch (c.type) {
+      case Incrop: case Num: case OpnParen: case Ref:
+        innerTokens.add(new BaseExprToken(q));
+        innerTokens.add(new RecExprToken(q));
+        break;
+      default:
+        break;
+    }
+  }
+
+  public TokenType getType() {
+    return TokenType.RecExpr;
+  }
+}
+
+class BaseExprToken extends Token {
+  public BaseExprToken(CharQueue q) throws GrammarException {
+    ClassifiedString c = q.peek();
+    if (c == null) {throw new GrammarException(q.getLineNumber());}
+    switch (c.type) {
+      case Incrop: case Num: case OpnParen: case Ref:
+        innerTokens.add(new SingleExprToken(q));
+        innerTokens.add(new RecBaseToken(q));
+        break;
+      default:
+        throw new GrammarException(c.linenum);
+    }
+    
+  }
+
+  public TokenType getType() {
+    return TokenType.BaseExpr;
+  }
+}
+
+class RecBaseToken extends Token {
+
+  public RecBaseToken(CharQueue q) throws GrammarException {
+    ClassifiedString c = q.peek();
+    if (c == null) {throw new GrammarException(q.getLineNumber());}
+    switch (c.type) {
+      case Binop:
+        innerTokens.add(new BinopToken(q));
+        innerTokens.add(new SingleExprToken(q));
+        innerTokens.add(new RecBaseToken(q));
+        break;
+      default:
+        break;
+    }
+  }
+
+  public TokenType getType() {
+    return TokenType.RecBase;
+  }
+}
+
+class SingleExprToken extends Token {
+
+  public SingleExprToken(CharQueue q) throws GrammarException {
+    ClassifiedString c = q.peek();
+    if (c == null) {throw new GrammarException(q.getLineNumber());}
+    switch (c.type) {
+      case Incrop:
+        innerTokens.add(new PrefixExprToken(q));
+        break;
+      case Num:
+        innerTokens.add(new PostfixExprToken(q));
+        break;
+      case OpnParen:
+        innerTokens.add(new PostfixExprToken(q));
+        break;
+      case Ref:
+        innerTokens.add(new PostfixExprToken(q));
+      default:
+        throw new GrammarException(c.linenum);
+    }
+  }
+
+  public TokenType getType() {
+    return TokenType.SingleExpr;
+  }
+}
+
+class PrefixExprToken extends Token {
+
+  public PrefixExprToken(CharQueue q) throws GrammarException {
+    ClassifiedString c = q.peek();
+    if (c == null) {throw new GrammarException(q.getLineNumber());}
+    switch (c.type) {
+      case Incrop:
+        innerTokens.add(new IncropToken(q));
+        innerTokens.add(new SingleExprToken(q));
+        break;
+      default:
+        throw new GrammarException(c.linenum);
+    }
+  }
+
+  public TokenType getType() {
+    return TokenType.PrefixExpr;
+  }
+}
+
+class PostfixExprToken extends Token {
+
+  public PostfixExprToken(CharQueue q) throws GrammarException {
+    ClassifiedString c = q.peek();
+    if (c == null) {throw new GrammarException(q.getLineNumber());}
+    switch (c.type) {
+      case Num: case OpnParen: case Ref:
+        innerTokens.add(new AtomicToken(q));
+        innerTokens.add(new RecPostfixToken(q));
+        break;
+      default:
+        throw new GrammarException(c.linenum);
+    }
+  }
+
+  public TokenType getType() {
+    return TokenType.PostfixExpr;
+  }
+}
+
+class RecPostfixToken extends Token {
+
+  public RecPostfixToken(CharQueue q) throws GrammarException {
+    ClassifiedString c = q.peek();
+    if (c == null) {throw new GrammarException(q.getLineNumber());}
+    switch (c.type) {
+      case Incrop:
+        innerTokens.add(new IncropToken(q));
+        innerTokens.add(new RecPostfixToken(q));
+        break;
+      default:
+        break;
+    }
+  }
+
+  public TokenType getType() {
+    return TokenType.RecPostfix;
+  }
+}
+
+class AtomicToken extends Token {
+
+  public AtomicToken(CharQueue q) throws GrammarException {
+    ClassifiedString c = q.peek();
+    if (c == null) {throw new GrammarException(q.getLineNumber());}
     switch (c.type) {
       case Num:
-        return null;
+        innerTokens.add(new NumToken(q));
+        break;
+      case OpnParen:
+        innerTokens.add(new ParenValueToken(q));
+        break;
+      case Ref:
+        innerTokens.add(new LValueToken(q));
+        break;
       default:
-        return null;
+        throw new GrammarException(c.linenum);
     }
+  }
+
+  public TokenType getType() {
+    return TokenType.Atomic;
+  }
+}
+
+class LValueToken extends Token {
+
+  public LValueToken(CharQueue q) throws GrammarException {
+    innerTokens.add(new TerminalTextToken(q,StringType.Ref));
+    innerTokens.add(new ExprToken(q));
+  }
+
+  public TokenType getType() {
+    return TokenType.LValue;
+  }
+}
+
+class ParenValueToken extends Token {
+
+  public ParenValueToken(CharQueue q) throws GrammarException {
+    innerTokens.add(new TerminalTextToken(q,StringType.OpnParen));
+    innerTokens.add(new ExprToken(q));
+    innerTokens.add(new TerminalTextToken(q,StringType.ClsParen));
+  }
+
+  public TokenType getType() {
+    return TokenType.ParenValue;
+  }
+}
+
+class NumToken extends Token {
+
+  public NumToken(CharQueue q) throws GrammarException {
+    innerTokens.add(new TerminalTextToken(q,StringType.Num));
+  }
+
+  public TokenType getType() {
+    return TokenType.Num;
+  }
+}
+
+class IncropToken extends Token {
+
+  public IncropToken(CharQueue q) throws GrammarException {
+    innerTokens.add(new TerminalTextToken(q,StringType.Incrop));
+  }
+
+  public TokenType getType() {
+    return TokenType.Incrop;
+  }
+}
+
+class BinopToken extends Token {
+
+  public BinopToken(CharQueue q) throws GrammarException {
+    innerTokens.add(new TerminalTextToken(q,StringType.Binop));
+  }
+
+  public TokenType getType() {
+    return TokenType.Binop;
+  }
+}
+
+class TerminalTextToken extends Token {
+  private String text;
+  public TerminalTextToken(CharQueue q, StringType toExpect) throws GrammarException {
+    ClassifiedString recieved = q.poll();
+    if (recieved == null) {throw new GrammarException(q.getLineNumber());}
+    if (!(toExpect.chars.contains(recieved.inner))) {
+      throw new GrammarException(recieved.linenum);
+    }
+    this.text = recieved.inner;
+  }
+
+  @Override
+  public String getContent() {
+    return text;
+  }
+
+  public TokenType getType() {
+    return TokenType._PrintableText;
   }
 }
 
 
-interface TokenInterface {
-  public Token getNext(ClassifiedString c);
-}
 
 abstract class Token {
-  public final TokenOrString inner;
-  protected final TokenType type;
-
-  public Token(Token t, TokenType type) {
-    this(new TokenOrString(t), type);
-  }
-  public Token(String s, TokenType type) {
-    this(new TokenOrString(s), type);
-  }
-
-  private Token(TokenOrString ts, TokenType type) {
-    this.inner = ts;
-    this.type = type;
-  }
-
+  InnerTokenSet innerTokens = new InnerTokenSet();
+  public abstract TokenType getType();
   public String getContent() {
-    return inner.getContent();
-  }
-}
-
-class TokenOrString {
-  private boolean isToken;
-  private Token token = null;
-  private String string = null;
-  
-  public TokenOrString(Token t) {
-    this.isToken = true;
-    this.token = t;
-  }
-  public TokenOrString(String s) {
-    this.isToken = false;
-    this.string = s;
-  }
-
-  public String getContent() {
-    if (this.isToken) {
-      return this.token.getContent();
-    }
-    else {
-      return this.string;
-    }
+    return innerTokens.getContent();
   }
 }
 
@@ -144,6 +382,7 @@ enum StringType {
   ClsParen(")"),
   Ref("$"),
   EOF(""),
+  Comment("#"),
   ;
   public final String chars;
   private StringType(String chars) {
@@ -154,18 +393,47 @@ enum StringType {
 class ClassifiedString {
   public final String inner;
   public final StringType type;
-  public ClassifiedString(String content, StringType s) {
+  public final int linenum;
+  public ClassifiedString(String content, StringType s, int linenum) {
     this.inner = content;
     this.type = s;
+    this.linenum = linenum;
   }
 }
 
+class CharQueue extends ArrayDeque<ClassifiedString> {
+  int lastline = 0;
+  @Override
+  public ClassifiedString poll() {
+    ClassifiedString c = super.poll();
+    if (c != null) lastline = c.linenum;
+    return c; 
+  }
+  public int getLineNumber() {
+    return lastline;
+  }
+}
+class InnerTokenSet extends ArrayList<Token> {
+  public String getContent() {
+    String fullcontent = "";
+    for (Token t : this) {
+      fullcontent += t.getContent();
+    }
+    return fullcontent;
+  }
+}
 
 class SyntaxParsingException extends Exception {
   public SyntaxParsingException(String m) {
     super(m);
   }
   public SyntaxParsingException(int line) {
+    super("Parse error in line " + line);
+  }
+}
+
+class GrammarException extends Exception {
+  public GrammarException(int line) {
     super("Parse error in line " + line);
   }
 }

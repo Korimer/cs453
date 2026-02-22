@@ -1,8 +1,0 @@
-123 ## num
-100++ ## num incrop ## expr incrop
-(101--) ## (expr) ## (num incrop)
---20 ## incrop num
-++ ++ 1 ++ ## incrop incrop num incrop
-10 - 1 ## 
-10 - ++ 1
-12 

@@ -21,11 +21,12 @@ prefix_expr  ::= incrop single_expr
 postfix_expr ::= atomic rec_postfix
 rec_postfix  ::= incrop rec_postfix |
 
-atomic       ::= num | lvalue | (expr)
+atomic       ::= num | lvalue | parenvalue
 
 lvalue       ::= $ expr
+parenvalue   ::= ( expr )
 
-num 	       ::= 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 
+num 	     ::= 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 
 incrop       ::= ++ | --
 binop        ::= + | -
 
@@ -50,6 +51,7 @@ rec_postfix  = {++,--,ε}
 atomic       = {0,1,2,3,4,5,6,7,8,9,$,(}
 
 lvalue       = {$}
+parenvalue   = {(}
 
 num          = {0,1,2,3,4,5,6,7,8,9}
 incrop       = {++,--}
@@ -72,6 +74,7 @@ rec_postfix  = {+,-}
 atomic       = {++,--}
 
 lvalue       = {++,--}
+parenvalue   = {++,--}
 
 num          = {++,--}
 incrop       = {++,--,0,1,2,3,4,5,6,7,8,9,$,(}
