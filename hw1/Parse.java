@@ -11,7 +11,7 @@ public class Parse {
     //  lines.add(scnr.nextLine());
     //}
     //scnr.close();
-    lines.add("++++(1+++1)#asdgfasf");
+    lines.add("1++++(1+++1)#asdgfasf");
     lines.add("++");
     try {
       CharQueue queue = Tokenizer.classifyString(lines);
@@ -40,7 +40,7 @@ class Tokenizer {
         ClassifiedString result = identify(line.substring(j,j+1),i+1);
         if (result == null)
           throw new SyntaxParsingException(i+1);
-        if (result.type == StringType.Comment)
+        if (result.type == StringType._Comment)
           break;
         classified.add(result);
       }
@@ -119,6 +119,7 @@ class RecExprToken extends Token {
     if (c == null) {throw new GrammarException(q.getLineNumber());}
     switch (c.type) {
       case Incrop: case Num: case OpnParen: case Ref:
+        innerTokens.add(new StringConcatSignifier());
         innerTokens.add(new BaseExprToken(q));
         innerTokens.add(new RecExprToken(q));
         break;
@@ -207,7 +208,7 @@ class PrefixExprToken extends Token {
     if (c == null) {throw new GrammarException(q.getLineNumber());}
     switch (c.type) {
       case Incrop:
-        innerTokens.add(new IncropToken(q));
+        innerTokens.add(new IncropToken(q,IncrementType.Pre));
         innerTokens.add(new SingleExprToken(q));
         break;
       default:
@@ -247,7 +248,7 @@ class RecPostfixToken extends Token {
     if (c == null) {throw new GrammarException(q.getLineNumber());}
     switch (c.type) {
       case Incrop:
-        innerTokens.add(new IncropToken(q));
+        innerTokens.add(new IncropToken(q,IncrementType.Post));
         innerTokens.add(new RecPostfixToken(q));
         break;
       default:
@@ -323,8 +324,11 @@ class NumToken extends Token {
 
 class IncropToken extends Token {
 
-  public IncropToken(CharQueue q) throws GrammarException {
-    innerTokens.add(new TerminalTextToken(q,StringType.Incrop));
+  public IncropToken(CharQueue q, IncrementType incrtype) throws GrammarException {
+    if (incrtype == IncrementType.Post)
+      innerTokens.add(new TerminalPostIncrText(q));
+    else
+      innerTokens.add(new TerminalPreIncrText(q));
   }
 
   public TokenType getType() {
@@ -343,15 +347,18 @@ class BinopToken extends Token {
   }
 }
 
-class TerminalTextToken extends Token {
+class TerminalPreIncrText extends Token {
   private String text;
-  public TerminalTextToken(CharQueue q, StringType toExpect) throws GrammarException {
+  public TerminalPreIncrText(CharQueue q) throws GrammarException {
     ClassifiedString recieved = q.poll();
     if (recieved == null) {throw new GrammarException(q.getLineNumber());}
-    if (!(toExpect.chars.contains(recieved.inner))) {
+    if (!(StringType.Incrop.chars.contains(recieved.inner))) {
       throw new GrammarException(recieved.linenum);
     }
-    this.text = recieved.inner;
+    if (recieved.inner.equals("<"))
+      this.text = "--_";
+    else
+      this.text = "++_";
   }
 
   @Override
@@ -364,6 +371,70 @@ class TerminalTextToken extends Token {
   }
 }
 
+class TerminalPostIncrText extends Token {
+  private String text;
+  public TerminalPostIncrText(CharQueue q) throws GrammarException {
+    ClassifiedString recieved = q.poll();
+    if (recieved == null) {throw new GrammarException(q.getLineNumber());}
+    if (!(StringType.Incrop.chars.contains(recieved.inner))) {
+      throw new GrammarException(recieved.linenum);
+    }
+    if (recieved.inner.equals("<"))
+      this.text = "_-- ";
+    else
+      this.text = "_++ ";
+  }
+
+  @Override
+  public String getContent() {
+    return text;
+  }
+
+  public TokenType getType() {
+    return TokenType._PrintableText;
+  }
+}
+
+class TerminalTextToken extends Token {
+  private String text;
+  public TerminalTextToken(CharQueue q, StringType toExpect) throws GrammarException {
+    ClassifiedString recieved = q.poll();
+    if (recieved == null) {throw new GrammarException(q.getLineNumber());}
+    if (!(toExpect.chars.contains(recieved.inner))) {
+      throw new GrammarException(recieved.linenum);
+    }
+    switch (toExpect) {
+      case Incrop:
+        if (recieved.inner.equals("<"))
+          this.text = "-- ";
+        else
+          this.text = "++ ";
+        break;
+      default:
+        this.text = recieved.inner + " ";
+    }
+  }
+
+  @Override
+  public String getContent() {
+    return text;
+  }
+
+  public TokenType getType() {
+    return TokenType._PrintableText;
+  }
+}
+
+class StringConcatSignifier extends Token {
+  @Override
+  public String getContent() {
+    return "_ ";
+  }
+
+  public TokenType getType() {
+    return TokenType._PrintableText;
+  }
+}
 
 
 abstract class Token {
@@ -382,7 +453,7 @@ enum StringType {
   ClsParen(")"),
   Ref("$"),
   EOF(""),
-  Comment("#"),
+  _Comment("#"),
   ;
   public final String chars;
   private StringType(String chars) {
@@ -421,6 +492,10 @@ class InnerTokenSet extends ArrayList<Token> {
     }
     return fullcontent;
   }
+}
+
+enum IncrementType {
+  Pre, Post
 }
 
 class SyntaxParsingException extends Exception {
