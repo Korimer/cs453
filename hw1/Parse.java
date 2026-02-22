@@ -14,7 +14,7 @@ public class Parse {
     try {
       CharQueue queue = Tokenizer.classifyString(lines);
       ExprToken e = Tokenizer.tokenize(queue);
-      System.out.println("content: " + e.getContent());
+      System.out.println("content: " + e.getContentPost());
     } catch (Exception e) {
       throw new RuntimeException(e);
     }
@@ -33,13 +33,11 @@ class Tokenizer {
     ArrayList<String> preparsed_lines = preparse(s);
     int i=0;
     for (i=0; i<preparsed_lines.size(); i++) {
-      String line = preparsed_lines.get(i);
+      String line = preparsed_lines.get(i).split("#")[0];
       for (int j=0; j<line.length(); j++) {
         ClassifiedString result = identify(line.substring(j,j+1),i+1);
         if (result == null)
           throw new SyntaxParsingException(i+1);
-        if (result.type == StringType._Comment)
-          break;
         classified.add(result);
       }
     }
@@ -120,6 +118,15 @@ class RecExprToken extends Token {
       default:
         break;
     }
+  }
+  
+  @Override
+  public String getContentPost() {
+    if (this.innerTokens.size() == 0)
+      return "";
+    return this.innerTokens.get(1).getContentPost()
+      + this.innerTokens.get(0).getContentPost()
+      + this.innerTokens.get(2).getContentPost();
   }
 }
 
@@ -204,6 +211,12 @@ class PrefixExprToken extends Token {
         throw new GrammarException(c.linenum);
     }
   }
+
+  @Override
+  public String getContentPost() {
+    return this.innerTokens.get(1).getContentPost()
+      + this.innerTokens.get(0).getContentPost();
+  }
 }
 
 class PostfixExprToken extends Token {
@@ -219,6 +232,12 @@ class PostfixExprToken extends Token {
       default:
         throw new GrammarException(c.linenum);
     }
+  }
+
+  @Override
+  public String getContentPost() {
+    return this.innerTokens.get(1).getContentPost()
+      + this.innerTokens.get(0).getContentPost();
   }
 }
 
@@ -264,6 +283,12 @@ class LValueToken extends Token {
   public LValueToken(CharQueue q) throws GrammarException {
     innerTokens.add(new TerminalTextToken(q,StringType.Ref));
     innerTokens.add(new ExprToken(q));
+  }
+
+  @Override
+  public String getContentPost() {
+    return this.innerTokens.get(1).getContentPost()
+      + this.innerTokens.get(0).getContentPost();
   }
 }
 
@@ -356,6 +381,9 @@ class TerminalTextToken extends Token {
       throw new GrammarException(recieved.linenum);
     }
     switch (toExpect) {
+      case OpnParen: case ClsParen:
+        this.text = "";
+        break;
       case Incrop:
         if (recieved.inner.equals("<"))
           this.text = "-- ";
@@ -406,7 +434,6 @@ enum StringType {
   ClsParen(")"),
   Ref("$"),
   EOF(""),
-  _Comment("#"),
   ;
   public final String chars;
   private StringType(String chars) {
