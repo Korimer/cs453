@@ -6,26 +6,6 @@ incrop 	::= 	++ | --
 binop 	::= 	+ | - |
 num 	::= 	0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 
 
--- Problems --
---------------
-recursion 
-
-- Can be fixed by splitting expr into a recursive and non-recursive half
-
-preincr   ::= incrop expr
-postincr  ::= expr incrop
-tail_expr ::= num | lvalue | preincr | (expr)
-head_expr ::= postincr | expr binop expr
-expr      ::= tail_expr head_expr | tail_expr
-
-painful list concatenation (binop is nullable, making expr expr valid)
-
-- can be slightly polished by making list concatenation an explicit case
-  rather than implicit from a binop
-
-binop ::= + | -
-head_expr ::= postincr | expr binop expr | expr expr
-
 -- Final Grammar --
 -------------------
 expr         ::= rec_expr
@@ -34,19 +14,60 @@ rec_expr     ::= base_expr rec_expr |
 base_expr    ::= mono_expr rec_base
 rec_base     ::= binop mono_expr rec_base |
              
-mono_expr    ::= incrop mono_expr | postfix_expr
+single_expr  ::= incrop mono_expr | postfix_expr
 
-postfix_expr ::= literal rec_postfix
+postfix_expr ::= atomic  rec_postfix
 rec_postfix  ::= incrop rec_postfix |
 
-literal      ::= num | lvalue | (expr)
+atomic       ::= num | lvalue | (expr)
 
 lvalue       ::= $ expr
 
-num 	     ::= 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 
+num 	       ::= 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 
 incrop       ::= ++ | --
 binop        ::= + | -
 
+
+-- First and Follow --
+----------------------
+
+# First
+expr         = {++,--,0,1,2,3,4,5,6,7,8,9,$,( ,F}
+rec_expr     = {++,--,0,1,2,3,4,5,6,7,8,9,$,( ,F}
+
+base_expr    = {++,--,0,1,2,3,4,5,6,7,8,9,$ ,(}
+rec_base     = {+,- ,F}
+
+single_expr  = {++,--,0,1,2,3,4,5,6,7,8,9,$,(}
+
+postfix_expr = {0,1,2,3,4,5,6,7,8,9,$,(}
+rec_postfix  = {++,--,F}
+
+atomic       = {0,1,2,3,4,5,6,7,8,9,$,(}
+
+lvalue       = {$}
+
+num          = {0,1,2,3,4,5,6,7,8,9}
+incrop       = {++,--}
+binop        = {+,-}
+
+# Follow
+expr         = {+,-,$,),++,--}
+rec_expr     = { $,) }
+
+base_expr    = { $,) }
+rec_base     = { $,) }
+
+single_expr  = {+,-,$,) }
+
+postfix_expr = {+,-,$,) }
+rec_postfix  = {+,-,$,) }
+
+atomic       = {++,--,+,-,$,)}
+
+lvalue       = {++,--,+,-,$,)}
+
+num          = {++,--,+,-,$,)}
 
 -- Predictive Parsing --
 ________________________

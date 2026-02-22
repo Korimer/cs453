@@ -34,7 +34,7 @@ class Tokenizer {
       }
     }
 
-    classified.add(new ClassifiedString("", StringType.EOL));
+    classified.add(new ClassifiedString("", StringType.EOF));
 
     return classified;
   }
@@ -73,10 +73,21 @@ enum TokenType {
   Binop,
 }
 
-public class ExprToken extends Token {
-  
+class ExprToken implements TokenInterface {
+  public Token getNext(ClassifiedString c) {
+    switch (c.type) {
+      case Num:
+        return null;
+      default:
+        return null;
+    }
+  }
 }
 
+
+interface TokenInterface {
+  public Token getNext(ClassifiedString c);
+}
 
 abstract class Token {
   public final TokenOrString inner;
@@ -130,7 +141,7 @@ enum StringType {
   OpnParen("("),
   ClsParen(")"),
   Ref("$"),
-  EOL(""),
+  EOF(""),
   ;
   public final String chars;
   private StringType(String chars) {
