@@ -5,14 +5,12 @@ import java.util.Scanner;
 public class Parse {
 
   public static void main(String[] args) {
-    //Scanner scnr = new Scanner(System.in);
+    Scanner scnr = new Scanner(System.in);
     ArrayList<String> lines = new ArrayList<>();
-    //while (scnr.hasNext()) {
-    //  lines.add(scnr.nextLine());
-    //}
-    //scnr.close();
-    lines.add("1++++(1+++1)#asdgfasf");
-    lines.add("++");
+    while (scnr.hasNext()) {
+      lines.add(scnr.nextLine());
+    }
+    scnr.close();
     try {
       CharQueue queue = Tokenizer.classifyString(lines);
       ExprToken e = Tokenizer.tokenize(queue);
@@ -107,10 +105,6 @@ class ExprToken extends Token {
         throw new GrammarException(c.linenum);
     }
   }
-  
-  public TokenType getType() {
-    return TokenType.Expr;
-  }
 }
 
 class RecExprToken extends Token {
@@ -127,10 +121,6 @@ class RecExprToken extends Token {
         break;
     }
   }
-
-  public TokenType getType() {
-    return TokenType.RecExpr;
-  }
 }
 
 class BaseExprToken extends Token {
@@ -146,10 +136,6 @@ class BaseExprToken extends Token {
         throw new GrammarException(c.linenum);
     }
     
-  }
-
-  public TokenType getType() {
-    return TokenType.BaseExpr;
   }
 }
 
@@ -169,8 +155,14 @@ class RecBaseToken extends Token {
     }
   }
 
-  public TokenType getType() {
-    return TokenType.RecBase;
+  @Override
+  public String getContentPost() {
+    if (this.innerTokens.size() != 0)
+      return this.innerTokens.get(1).getContentPost()
+        + this.innerTokens.get(0).getContentPost()
+        + this.innerTokens.get(2).getContentPost()
+        ;
+    return "";
   }
 }
 
@@ -191,13 +183,10 @@ class SingleExprToken extends Token {
         break;
       case Ref:
         innerTokens.add(new PostfixExprToken(q));
+        break;
       default:
         throw new GrammarException(c.linenum);
     }
-  }
-
-  public TokenType getType() {
-    return TokenType.SingleExpr;
   }
 }
 
@@ -215,10 +204,6 @@ class PrefixExprToken extends Token {
         throw new GrammarException(c.linenum);
     }
   }
-
-  public TokenType getType() {
-    return TokenType.PrefixExpr;
-  }
 }
 
 class PostfixExprToken extends Token {
@@ -235,10 +220,6 @@ class PostfixExprToken extends Token {
         throw new GrammarException(c.linenum);
     }
   }
-
-  public TokenType getType() {
-    return TokenType.PostfixExpr;
-  }
 }
 
 class RecPostfixToken extends Token {
@@ -254,10 +235,6 @@ class RecPostfixToken extends Token {
       default:
         break;
     }
-  }
-
-  public TokenType getType() {
-    return TokenType.RecPostfix;
   }
 }
 
@@ -280,10 +257,6 @@ class AtomicToken extends Token {
         throw new GrammarException(c.linenum);
     }
   }
-
-  public TokenType getType() {
-    return TokenType.Atomic;
-  }
 }
 
 class LValueToken extends Token {
@@ -291,10 +264,6 @@ class LValueToken extends Token {
   public LValueToken(CharQueue q) throws GrammarException {
     innerTokens.add(new TerminalTextToken(q,StringType.Ref));
     innerTokens.add(new ExprToken(q));
-  }
-
-  public TokenType getType() {
-    return TokenType.LValue;
   }
 }
 
@@ -305,20 +274,12 @@ class ParenValueToken extends Token {
     innerTokens.add(new ExprToken(q));
     innerTokens.add(new TerminalTextToken(q,StringType.ClsParen));
   }
-
-  public TokenType getType() {
-    return TokenType.ParenValue;
-  }
 }
 
 class NumToken extends Token {
 
   public NumToken(CharQueue q) throws GrammarException {
     innerTokens.add(new TerminalTextToken(q,StringType.Num));
-  }
-
-  public TokenType getType() {
-    return TokenType.Num;
   }
 }
 
@@ -330,20 +291,12 @@ class IncropToken extends Token {
     else
       innerTokens.add(new TerminalPreIncrText(q));
   }
-
-  public TokenType getType() {
-    return TokenType.Incrop;
-  }
 }
 
 class BinopToken extends Token {
 
   public BinopToken(CharQueue q) throws GrammarException {
     innerTokens.add(new TerminalTextToken(q,StringType.Binop));
-  }
-
-  public TokenType getType() {
-    return TokenType.Binop;
   }
 }
 
@@ -356,18 +309,18 @@ class TerminalPreIncrText extends Token {
       throw new GrammarException(recieved.linenum);
     }
     if (recieved.inner.equals("<"))
-      this.text = "--_";
+      this.text = "--_ ";
     else
-      this.text = "++_";
+      this.text = "++_ ";
   }
 
   @Override
   public String getContent() {
     return text;
   }
-
-  public TokenType getType() {
-    return TokenType._PrintableText;
+  @Override
+  public String getContentPost() {
+    return this.getContent();
   }
 }
 
@@ -389,9 +342,8 @@ class TerminalPostIncrText extends Token {
   public String getContent() {
     return text;
   }
-
-  public TokenType getType() {
-    return TokenType._PrintableText;
+  public String getContentPost() {
+    return this.getContent();
   }
 }
 
@@ -419,9 +371,8 @@ class TerminalTextToken extends Token {
   public String getContent() {
     return text;
   }
-
-  public TokenType getType() {
-    return TokenType._PrintableText;
+  public String getContentPost() {
+    return this.getContent();
   }
 }
 
@@ -430,18 +381,20 @@ class StringConcatSignifier extends Token {
   public String getContent() {
     return "_ ";
   }
-
-  public TokenType getType() {
-    return TokenType._PrintableText;
+  @Override
+  public String getContentPost() {
+    return this.getContent();
   }
 }
 
 
 abstract class Token {
   InnerTokenSet innerTokens = new InnerTokenSet();
-  public abstract TokenType getType();
   public String getContent() {
     return innerTokens.getContent();
+  }
+  public String getContentPost() {
+    return innerTokens.getContentPost();
   }
 }
 
@@ -489,6 +442,14 @@ class InnerTokenSet extends ArrayList<Token> {
     String fullcontent = "";
     for (Token t : this) {
       fullcontent += t.getContent();
+    }
+    return fullcontent;
+  }
+  
+  public String getContentPost() {
+    String fullcontent = "";
+    for (Token t : this) {
+      fullcontent += t.getContentPost();
     }
     return fullcontent;
   }
