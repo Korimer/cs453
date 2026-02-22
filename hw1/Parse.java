@@ -46,7 +46,9 @@ class Tokenizer {
         throw new SyntaxParsingException(i+1);
       lines[i] = line
         .replace("++",">")
-        .replace("--","<");
+        .replace("--","<")
+        .replace(" ","")
+      ;
     }
     
     return lines;

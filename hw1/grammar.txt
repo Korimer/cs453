@@ -8,13 +8,15 @@ num 	::= 	0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9
 
 -- Final Grammar --
 -------------------
-expr         ::= rec_expr
+expr         ::= base_expr rec_expr
 rec_expr     ::= base_expr rec_expr | 
 
 base_expr    ::= single_expr rec_base
 rec_base     ::= binop single_expr rec_base |
 
-single_expr  ::= incrop single_expr | postfix_expr
+single_expr  ::= prefix_expr | postfix_expr
+
+prefix_expr  ::= incrop single_expr
 
 postfix_expr ::= atomic rec_postfix
 rec_postfix  ::= incrop rec_postfix |
@@ -32,16 +34,18 @@ binop        ::= + | -
 ----------------------
 
 # First
-expr         = {++,--,0,1,2,3,4,5,6,7,8,9,$,(,F}
-rec_expr     = {++,--,0,1,2,3,4,5,6,7,8,9,$,(,F}
+expr         = {++,--,0,1,2,3,4,5,6,7,8,9,$,(}
+rec_expr     = {++,--,0,1,2,3,4,5,6,7,8,9,$,(,ε}
 
 base_expr    = {++,--,0,1,2,3,4,5,6,7,8,9,$,(}
-rec_base     = {+,-,F}
+rec_base     = {+,-,ε}
 
 single_expr  = {++,--,0,1,2,3,4,5,6,7,8,9,$,(}
 
+prefix_expr  = {++,--}
+
 postfix_expr = {0,1,2,3,4,5,6,7,8,9,$,(}
-rec_postfix  = {++,--,F}
+rec_postfix  = {++,--,ε}
 
 atomic       = {0,1,2,3,4,5,6,7,8,9,$,(}
 
@@ -52,22 +56,9 @@ incrop       = {++,--}
 binop        = {+,-}
 
 # Follow
-expr         = {+,-,$,),++,--}
-rec_expr     = { $,) }
 
-base_expr    = { $,) }
-rec_base     = { $,) }
 
-single_expr  = {+,-,$,) }
 
-postfix_expr = {+,-,$,) }
-rec_postfix  = {+,-,$,) }
-
-atomic       = {++,--,+,-,$,)}
-
-lvalue       = {++,--,+,-,$,)}
-
-num          = {++,--,+,-,$,)}
 
 -- Predictive Parsing --
 ________________________
