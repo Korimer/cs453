@@ -14,9 +14,10 @@ public class Parse {
     try {
       CharQueue queue = Tokenizer.classifyString(lines);
       ExprToken e = Tokenizer.tokenize(queue);
-      System.out.println("content: " + e.getContentPost());
+      System.out.println(e.getContentPost());
+      System.out.println("Expression parsed successfully");
     } catch (Exception e) {
-      throw new RuntimeException(e);
+      System.out.println(e.getMessage());
     }
   }
 }
@@ -305,9 +306,9 @@ class TerminalPreIncrText extends Token {
       throw new GrammarException(recieved.linenum);
     }
     if (recieved.inner.equals("<"))
-      this.text = "--_ ";
+      this.text = " --_";
     else
-      this.text = "++_ ";
+      this.text = " ++_ ";
   }
 
   @Override
@@ -329,9 +330,9 @@ class TerminalPostIncrText extends Token {
       throw new GrammarException(recieved.linenum);
     }
     if (recieved.inner.equals("<"))
-      this.text = "_-- ";
+      this.text = " _--";
     else
-      this.text = "_++ ";
+      this.text = " _++";
   }
 
   @Override
@@ -355,14 +356,8 @@ class TerminalTextToken extends Token {
       case OpnParen: case ClsParen:
         this.text = "";
         break;
-      case Incrop:
-        if (recieved.inner.equals("<"))
-          this.text = "-- ";
-        else
-          this.text = "++ ";
-        break;
       default:
-        this.text = recieved.inner + " ";
+        this.text = " " + recieved.inner;
     }
   }
 
@@ -378,7 +373,7 @@ class TerminalTextToken extends Token {
 class StringConcatSignifier extends Token {
   @Override
   public String getContent() {
-    return "_ ";
+    return " _";
   }
   @Override
   public String getContentPost() {
