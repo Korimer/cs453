@@ -190,8 +190,8 @@ class PostfixExprToken extends Token {
 
   @Override
   public String getContentPost() {
-    return this.innerTokens.get(1).getContentPost()
-      + this.innerTokens.get(0).getContentPost();
+    return this.innerTokens.get(0).getContentPost()
+      + this.innerTokens.get(1).getContentPost();
   }
 }
 
@@ -216,7 +216,7 @@ class AtomicToken extends Token {
     if (c == null) {throw new GrammarException(q.getLineNumber());}
     switch (c.type) {
       case Incrop:
-        innerTokens.add(new IncropToken(q,IncrementType.Pre));
+        innerTokens.add(new PrefixExprToken(q));
         break;
       case Num:
         innerTokens.add(new NumToken(q));
