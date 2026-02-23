@@ -136,7 +136,7 @@ class BaseExprToken extends Token {
     if (c == null) {throw new GrammarException(q.getLineNumber());}
     switch (c.type) {
       case Incrop: case Num: case OpnParen: case Ref:
-        innerTokens.add(new SingleExprToken(q));
+        innerTokens.add(new PostfixExprToken(q));
         innerTokens.add(new RecBaseToken(q));
         break;
       default:
@@ -147,14 +147,13 @@ class BaseExprToken extends Token {
 }
 
 class RecBaseToken extends Token {
-
   public RecBaseToken(CharQueue q) throws GrammarException {
     ClassifiedString c = q.peek();
     if (c == null) {throw new GrammarException(q.getLineNumber());}
     switch (c.type) {
       case Binop:
         innerTokens.add(new BinopToken(q));
-        innerTokens.add(new SingleExprToken(q));
+        innerTokens.add(new PostfixExprToken(q));
         innerTokens.add(new RecBaseToken(q));
         break;
       default:
@@ -173,51 +172,6 @@ class RecBaseToken extends Token {
   }
 }
 
-class SingleExprToken extends Token {
-
-  public SingleExprToken(CharQueue q) throws GrammarException {
-    ClassifiedString c = q.peek();
-    if (c == null) {throw new GrammarException(q.getLineNumber());}
-    switch (c.type) {
-      case Incrop:
-        innerTokens.add(new PrefixExprToken(q));
-        break;
-      case Num:
-        innerTokens.add(new PostfixExprToken(q));
-        break;
-      case OpnParen:
-        innerTokens.add(new PostfixExprToken(q));
-        break;
-      case Ref:
-        innerTokens.add(new PostfixExprToken(q));
-        break;
-      default:
-        throw new GrammarException(c.linenum);
-    }
-  }
-}
-
-class PrefixExprToken extends Token {
-
-  public PrefixExprToken(CharQueue q) throws GrammarException {
-    ClassifiedString c = q.peek();
-    if (c == null) {throw new GrammarException(q.getLineNumber());}
-    switch (c.type) {
-      case Incrop:
-        innerTokens.add(new IncropToken(q,IncrementType.Pre));
-        innerTokens.add(new SingleExprToken(q));
-        break;
-      default:
-        throw new GrammarException(c.linenum);
-    }
-  }
-
-  @Override
-  public String getContentPost() {
-    return this.innerTokens.get(1).getContentPost()
-      + this.innerTokens.get(0).getContentPost();
-  }
-}
 
 class PostfixExprToken extends Token {
 
@@ -225,7 +179,7 @@ class PostfixExprToken extends Token {
     ClassifiedString c = q.peek();
     if (c == null) {throw new GrammarException(q.getLineNumber());}
     switch (c.type) {
-      case Num: case OpnParen: case Ref:
+      case Incrop: case Num: case OpnParen: case Ref:
         innerTokens.add(new AtomicToken(q));
         innerTokens.add(new RecPostfixToken(q));
         break;
@@ -242,7 +196,6 @@ class PostfixExprToken extends Token {
 }
 
 class RecPostfixToken extends Token {
-
   public RecPostfixToken(CharQueue q) throws GrammarException {
     ClassifiedString c = q.peek();
     if (c == null) {throw new GrammarException(q.getLineNumber());}
@@ -258,11 +211,13 @@ class RecPostfixToken extends Token {
 }
 
 class AtomicToken extends Token {
-
   public AtomicToken(CharQueue q) throws GrammarException {
     ClassifiedString c = q.peek();
     if (c == null) {throw new GrammarException(q.getLineNumber());}
     switch (c.type) {
+      case Incrop:
+        innerTokens.add(new IncropToken(q,IncrementType.Pre));
+        break;
       case Num:
         innerTokens.add(new NumToken(q));
         break;
@@ -278,8 +233,28 @@ class AtomicToken extends Token {
   }
 }
 
-class LValueToken extends Token {
+class PrefixExprToken extends Token {
+  public PrefixExprToken(CharQueue q) throws GrammarException {
+    ClassifiedString c = q.peek();
+    if (c == null) {throw new GrammarException(q.getLineNumber());}
+    switch (c.type) {
+      case Incrop:
+        innerTokens.add(new IncropToken(q,IncrementType.Pre));
+        innerTokens.add(new AtomicToken(q));
+        break;
+      default:
+        throw new GrammarException(c.linenum);
+    }
+  }
 
+  @Override
+  public String getContentPost() {
+    return this.innerTokens.get(1).getContentPost()
+      + this.innerTokens.get(0).getContentPost();
+  }
+}
+
+class LValueToken extends Token {
   public LValueToken(CharQueue q) throws GrammarException {
     innerTokens.add(new TerminalTextToken(q,StringType.Ref));
     innerTokens.add(new AtomicToken(q));
@@ -293,7 +268,6 @@ class LValueToken extends Token {
 }
 
 class ParenValueToken extends Token {
-
   public ParenValueToken(CharQueue q) throws GrammarException {
     innerTokens.add(new TerminalTextToken(q,StringType.OpnParen));
     innerTokens.add(new ExprToken(q));
@@ -302,14 +276,12 @@ class ParenValueToken extends Token {
 }
 
 class NumToken extends Token {
-
   public NumToken(CharQueue q) throws GrammarException {
     innerTokens.add(new TerminalTextToken(q,StringType.Num));
   }
 }
 
 class IncropToken extends Token {
-
   public IncropToken(CharQueue q, IncrementType incrtype) throws GrammarException {
     if (incrtype == IncrementType.Post)
       innerTokens.add(new TerminalPostIncrText(q));
@@ -319,7 +291,6 @@ class IncropToken extends Token {
 }
 
 class BinopToken extends Token {
-
   public BinopToken(CharQueue q) throws GrammarException {
     innerTokens.add(new TerminalTextToken(q,StringType.Binop));
   }
