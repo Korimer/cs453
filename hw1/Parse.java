@@ -188,12 +188,6 @@ class PostfixExprToken extends Token {
         throw new GrammarException(c.linenum);
     }
   }
-
-  @Override
-  public String getContentPost() {
-    return this.innerTokens.get(0).getContentPost()
-      + this.innerTokens.get(1).getContentPost();
-  }
 }
 
 class RecPostfixToken extends Token {
