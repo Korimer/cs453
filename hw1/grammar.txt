@@ -11,7 +11,7 @@ num 	::= 	0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9
 expr         ::= base_expr rec_expr
 rec_expr     ::= base_expr rec_expr | 
 
-base_expr    ::= lvalue | single_expr rec_base
+base_expr    ::= single_expr rec_base
 rec_base     ::= binop single_expr rec_base |
 
 single_expr  ::= prefix_expr | postfix_expr
@@ -21,9 +21,9 @@ prefix_expr  ::= incrop single_expr
 postfix_expr ::= atomic rec_postfix
 rec_postfix  ::= incrop rec_postfix |
 
-atomic       ::= num | parenvalue
+atomic       ::= lvalue | num | parenvalue
 
-lvalue       ::= $ expr
+lvalue       ::= $ atomic
 parenvalue   ::= ( expr )
 
 num 	     ::= 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 
@@ -35,6 +35,8 @@ binop        ::= + | -
 ----------------------
 
 # First
+
+
 expr         = {++,--,0,1,2,3,4,5,6,7,8,9,$,(}
 rec_expr     = {++,--,0,1,2,3,4,5,6,7,8,9,$,(,ε}
 
@@ -45,10 +47,10 @@ single_expr  = {++,--,0,1,2,3,4,5,6,7,8,9,(}
 
 prefix_expr  = {++,--}
 
-postfix_expr = {0,1,2,3,4,5,6,7,8,9,(}
+postfix_expr = {0,1,2,3,4,5,6,7,8,9,$,(}
 rec_postfix  = {++,--,ε}
 
-atomic       = {0,1,2,3,4,5,6,7,8,9,(}
+atomic       = {0,1,2,3,4,5,6,7,8,9,$,(}
 
 lvalue       = {$}
 parenvalue   = {(}
@@ -73,9 +75,9 @@ rec_postfix  = {+,-}
 
 atomic       = {++,--}
 
-lvalue       = {++,--,0,1,2,3,4,5,6,7,8,9,$,(}
+lvalue       = {++,--}
 parenvalue   = {++,--}
 
 num          = {++,--}
-incrop       = {++,--,0,1,2,3,4,5,6,7,8,9,(}
+incrop       = {++,--}
 binop        = {++,--,0,1,2,3,4,5,6,7,8,9,(}

@@ -282,7 +282,7 @@ class LValueToken extends Token {
 
   public LValueToken(CharQueue q) throws GrammarException {
     innerTokens.add(new TerminalTextToken(q,StringType.Ref));
-    innerTokens.add(new ExprToken(q));
+    innerTokens.add(new AtomicToken(q));
   }
 
   @Override
